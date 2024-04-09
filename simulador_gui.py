@@ -33,6 +33,10 @@ class Table(tk.Frame):
     def insert_row(self, row):
         self.tree.insert("", "end", values=row)
 
+    def insert_multiple_rows(self, rows):
+        for row in rows:
+            self.tree.insert("", "end", values=row)
+
     def clear_table(self):
         self.tree.delete(*self.tree.get_children())
 
@@ -336,30 +340,18 @@ class App(customtkinter.CTk):
 
     def run_simulation(self):
         start = perf_counter()
-
         self.simulation_table.clear_table()
-        self.vector_temp = [0, 0, "", "", 0, ""]
-        self.simulation_table.insert_row(self.vector_temp)
-        ingreso_regular = False
+        # pr_tuple_1 = tuple(tuple(lst) for lst in self.matrix)
+        # pr_tuple_2 = tuple(tuple(lst) for lst in self.matrix2)
 
-        cant_pacientes = 0
-        dias_en_hospital = 0
-        for _ in range(int(self.entry.get())):
-            row, ir, avg = ejercicio_286.start_simulation(
-                vector_estado=self.vector_temp,
-                ingreso_regular=ingreso_regular,
-                avg=(cant_pacientes, dias_en_hospital),
+        self.simulation_table.insert_multiple_rows(
+            ejercicio_286.start_simulation(
                 pr_en_hospital=self.matrix,
                 pr_cond_alta=self.matrix2,
+                iter=int(self.entry.get()),
             )
-            self.simulation_table.insert_row(row)
-            self.vector_temp = row[:]
-            ingreso_regular = ir
-            cant_pacientes = avg[0]
-            dias_en_hospital = avg[1]
-        print(
-            f'Los dias en promedio que pasa en el hospital un paciente que ingresa en estado "Regular" es de: {dias_en_hospital/cant_pacientes:.3f}'
         )
+
         end = perf_counter()
         print(f"Esta funcion demora {end-start} segundos")
 
