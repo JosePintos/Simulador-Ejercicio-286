@@ -1,5 +1,7 @@
 from random import random
 import functools
+import numpy as np
+
 
 estados = [
     ("buena", "buena"),
@@ -20,28 +22,16 @@ estados_alta = ["mejorada", "no_mejorada", "muerto"]
 
 
 def definir_condicion(rnd, probabilidades, sig_estado=None):
-    pr_acc = 0
+    probabilidades = (
+        probabilidades[0]
+        if (sig_estado == "" or sig_estado == "alta")
+        else probabilidades[estado_siguiente[sig_estado] + 1]
+    )
 
-    if not sig_estado or sig_estado == "alta":
-        probabilidades = [x for arr in probabilidades for x in arr]
-        res_estados = estados[:]
-    else:
-        est_idx = estado_siguiente[sig_estado]
-        probabilidades = probabilidades[est_idx]
-        if est_idx == 0:
-            res_estados = estados[:4]
-        elif est_idx == 1:
-            res_estados = estados[4:8]
-        else:
-            res_estados = estados[8:12]
-
-    probabilidades.sort(reverse=True)
-
-    for i, n in enumerate(probabilidades):
-        pr_acc += n
-        if rnd < pr_acc:
-            return res_estados[i]
-    return res_estados[len(probabilidades) - 1]
+    for i in range(len(probabilidades[0])):
+        if rnd < probabilidades[0][i]:
+            return probabilidades[1][i]
+    return probabilidades[1][len(probabilidades) - 1]
 
 
 def definir_condicion_alta(rnd, probabilidades):
@@ -77,13 +67,11 @@ def start_simulation(pr_en_hospital, pr_cond_alta, iter):
     condicion_alta = ""
     tabla_final = list()
 
-    # dict_probabilidades_condiciones = {
-    #     est: pr for est, pr in zip(estados[:3], pr_en_hospital)
-    # }
-    dict_probabilidades_cond_alta = {
-        est: pr for est, pr in zip(estados_alta, pr_cond_alta)
-    }
-    flat_pr_alta = [x for arr in pr_cond_alta for x in arr]
+    to_np_arr = np.array(pr_en_hospital)
+    all_acc = (np.cumsum(to_np_arr), estados[:])
+    buena_acc = (all_acc[0][0:4], estados[0:4])
+    regular_acc = (all_acc[0][4:8], estados[4:8])
+    critico_acc = (all_acc[0][8:], estados[8:])
 
     # Calcular promedio
     cant_pacientes, dias_en_hospital = 0, 0
@@ -91,7 +79,7 @@ def start_simulation(pr_en_hospital, pr_cond_alta, iter):
         rnd1 = random()
         estado1, estado2 = definir_condicion(
             rnd1,
-            probabilidades=pr_en_hospital,
+            probabilidades=[all_acc, buena_acc, regular_acc, critico_acc],
             sig_estado=vector_estado[3],
         )
         dias_en_hospital += 1 if ingreso_regular else 0
