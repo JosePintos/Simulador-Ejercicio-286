@@ -4,11 +4,17 @@ import customtkinter
 import ejercicio_286
 from time import perf_counter
 from functools import lru_cache
+import cProfile
+import pstats
+import csv
+
 
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme(
     "dark-blue"
 )  # Themes: "blue" (standard), "green", "dark-blue"
+
+FILENAME = "data_table.csv"
 
 
 class Table(tk.Frame):
@@ -33,9 +39,15 @@ class Table(tk.Frame):
     def insert_row(self, row):
         self.tree.insert("", "end", values=row)
 
-    def insert_multiple_rows(self, rows):
-        for row in rows:
-            self.tree.insert("", "end", values=row)
+    # def insert_multiple_rows(self, rows):
+    #     for row in rows:
+    #         self.tree.insert("", "end", values=row)
+
+    def insert_multiple_rows(self):
+        with open(FILENAME, "r") as file:
+            csv_reader = csv.reader(file)
+            for row in csv_reader[1:]:
+                self.tree.insert("", "end", values=row)
 
     def clear_table(self):
         self.tree.delete(*self.tree.get_children())
@@ -343,14 +355,12 @@ class App(customtkinter.CTk):
         self.simulation_table.clear_table()
         # pr_tuple_1 = tuple(tuple(lst) for lst in self.matrix)
         # pr_tuple_2 = tuple(tuple(lst) for lst in self.matrix2)
-
-        self.simulation_table.insert_multiple_rows(
-            ejercicio_286.start_simulation(
-                pr_en_hospital=self.matrix,
-                pr_cond_alta=self.matrix2,
-                iter=int(self.entry.get()),
-            )
+        ejercicio_286.start_simulation(
+            pr_en_hospital=self.matrix,
+            pr_cond_alta=self.matrix2,
+            iter=int(self.entry.get()),
         )
+        self.simulation_table.insert_multiple_rows()
 
         end = perf_counter()
         print(f"Esta funcion demora {end-start} segundos")
@@ -358,4 +368,6 @@ class App(customtkinter.CTk):
 
 if __name__ == "__main__":
     app = App()
-    app.mainloop()
+    cProfile.run("app.mainloop()", "profile_results", sort={"cumulative"})
+    profile_data = pstats.Stats("profile_results")
+    profile_data.strip_dirs().sort_stats("cumulative").print_stats(20)

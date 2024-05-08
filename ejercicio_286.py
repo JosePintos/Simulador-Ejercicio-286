@@ -1,7 +1,10 @@
 from random import random
 import functools
 import numpy as np
+import pandas as pd
+from csv import writer
 
+FILENAME = "data_table.csv"
 
 estados = [
     ("buena", "buena"),
@@ -95,6 +98,10 @@ def start_simulation(pr_en_hospital, pr_cond_alta, iter):
             # )
             ingreso_regular = False
         tabla_final.append(vector_estado)
+
+        with open(FILENAME, "a", newline="") as csvfile:
+            csv_writer = writer(csvfile)
+            csv_writer.writerow(vector_estado)
         vector_estado = [
             vector_estado[0] + 1,
             "%.3f" % (rnd1),
@@ -103,6 +110,7 @@ def start_simulation(pr_en_hospital, pr_cond_alta, iter):
             "%.3f" % (rnd2) if rnd2 else "-",
             condicion_alta,
         ]
+
     res = tuple(tuple(lst) for lst in tabla_final)
     return res
 
