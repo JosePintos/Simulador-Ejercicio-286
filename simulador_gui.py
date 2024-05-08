@@ -11,6 +11,24 @@ customtkinter.set_default_color_theme(
 )  # Themes: "blue" (standard), "green", "dark-blue"
 
 
+def validate_input(value):
+    # Check if the value is empty or a valid integer
+    if value == "":
+        return True
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
+
+
+def on_validate(P):
+    if validate_input(P):
+        return True
+    else:
+        return False
+
+
 class Table(tk.Frame):
     def __init__(self, parent, columns):
         tk.Frame.__init__(self, parent)
@@ -184,9 +202,9 @@ class App(customtkinter.CTk):
             row=1, column=0, padx=(20, 0), columnspan=4, pady=(10, 0), sticky="nsew"
         )
         self.matrix = [
-            [0.2, 0.2, 0.05, 0.1],
-            [0.7, 0.5, 0.6, 0.4],
-            [0.2, 0.25, 0.2, 0.04],
+            [0.65, 0.2, 0.05, 0.1],
+            [0.5, 0.3, 0.12, 0.4],
+            [0.51, 0.25, 0.2, 0.04],
         ]
 
         self.create_static_matrix()
@@ -199,14 +217,10 @@ class App(customtkinter.CTk):
         edit_button.grid(padx=10, pady=10, columnspan=2)
         self.matrix2 = [
             [round(6 / 22, 3), round(3 / 22, 3), round(1 / 22, 3)],
-            [round(3 / 22, 3), round(2 / 22, 3), round(1 / 22, 3)],
-            [round(1 / 22, 3), round(3 / 22, 3), round(2 / 22, 3)],
+            [round(3 / 22, 3), round(2 / 22, 3), round(3 / 22, 3)],
+            [round(1 / 22, 3), round(1 / 22, 3), round(2 / 22, 3)],
         ]
-        # self.matrix2 = [
-        #     [1, 2, 3],
-        #     [4, 5, 6],
-        #     [7, 8, 9],
-        # ]
+
         self.static_matrix_frame = customtkinter.CTkFrame(self.sidebar_frame)
         self.static_matrix_frame.grid(
             row=4, column=0, padx=(20, 0), columnspan=4, pady=(20, 0), sticky="nsew"
@@ -225,12 +239,15 @@ class App(customtkinter.CTk):
             self.iteraciones_frame, text="Iteraciones:", text_color="white"
         )
         self.iteraciones_label.grid(row=1, column=0, padx=(40, 20), pady=20)
+        vcmd = (self.register(on_validate), "%P")
 
-        self.entry = customtkinter.CTkEntry(
+        self.iterations_entry = customtkinter.CTkEntry(
             self.iteraciones_frame,
             textvariable=tk.StringVar(self.iteraciones_frame, value=10),
+            validatecommand=vcmd,
+            validate="key",
         )
-        self.entry.grid(row=1, column=2)
+        self.iterations_entry.grid(row=1, column=2)
 
         self.start_simulation_button = customtkinter.CTkButton(
             master=self.iteraciones_frame,
@@ -241,6 +258,21 @@ class App(customtkinter.CTk):
             command=self.run_simulation,
         )
         self.start_simulation_button.grid(row=2, column=2)
+
+        self.result_frame = customtkinter.CTkFrame(
+            self.sidebar_frame, fg_color="transparent"
+        )
+        self.result_frame.grid(
+            row=6,
+            column=0,
+            padx=(90, 0),
+            pady=(20, 0),
+            sticky="nsew",
+        )
+        self.result_label = customtkinter.CTkLabel(
+            self.result_frame, text="", text_color="white", width=10
+        )
+        self.result_label.grid(row=3, column=0)
 
         # TABLA DE DATOS
         columns = [
@@ -267,6 +299,16 @@ class App(customtkinter.CTk):
 
         self.vector_temp = [0, 0, "", "", 0, ""]
         self.simulation_table.insert_row(self.vector_temp)
+
+    def validate_iterations_input(self):
+        value = iterations_entry.get()
+        try:
+            float_value = float(value)
+            return 0 <= float_value <= 1
+        except ValueError:
+            tk.messagebox.showerror(
+                "Error", "Invalid input. Please enter numeric values."
+            )
 
     def create_static_matrix(self):
         # Add column names
@@ -307,12 +349,12 @@ class App(customtkinter.CTk):
     def create_static_matrix2(self):
 
         # Add labels for column names
-        for j, col_name in enumerate(["Buena", "Regular", "Crítica"]):
+        for j, col_name in enumerate(["Mejorada", "No Mejorada", "Muerto"]):
             col_label = customtkinter.CTkLabel(self.static_matrix_frame, text=col_name)
             col_label.grid(row=0, column=j + 1, padx=5, pady=5)
 
         # Add labels for row names and matrix values
-        for i, row_name in enumerate(["Mejorada", "No Mejorada", "Muerto"]):
+        for i, row_name in enumerate(["Buena", "Regular", "Crítica"]):
             row_label = customtkinter.CTkLabel(self.static_matrix_frame, text=row_name)
             row_label.grid(row=i + 1, column=0, padx=5, pady=5)
 
@@ -341,17 +383,17 @@ class App(customtkinter.CTk):
     def run_simulation(self):
         start = perf_counter()
         self.simulation_table.clear_table()
-        # pr_tuple_1 = tuple(tuple(lst) for lst in self.matrix)
-        # pr_tuple_2 = tuple(tuple(lst) for lst in self.matrix2)
-
-        self.simulation_table.insert_multiple_rows(
-            ejercicio_286.start_simulation(
-                pr_en_hospital=self.matrix,
-                pr_cond_alta=self.matrix2,
-                iter=int(self.entry.get()),
-            )
+        res, avg = ejercicio_286.start_simulation(
+            pr_en_hospital=self.matrix,
+            pr_cond_alta=self.matrix2,
+            iter=int(self.iterations_entry.get()),
         )
 
+        self.simulation_table.insert_multiple_rows(res)
+        self.result_label.configure(
+            text="Cantidad promedio de días\nque pasa en el hospital un paciente\n que ingresó con salud regular: "
+            + str(avg)
+        )
         end = perf_counter()
         print(f"Esta funcion demora {end-start} segundos")
 
